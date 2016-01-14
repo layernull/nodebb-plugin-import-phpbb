@@ -119,6 +119,7 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
             + prefix + 'privmsgs.privmsgs_text as _content, '
             + prefix + 'privmsgs.privmsgs_date as _timestamp '
             + 'FROM ' + prefix + 'privmsgs '
+			+ 'ORDER BY ' + prefix + 'privmsgs.privmsgs_date '
             + (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
 
             if(!Exporter.connection) {
