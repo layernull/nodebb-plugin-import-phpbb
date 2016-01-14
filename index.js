@@ -44,19 +44,20 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
             + prefix + 'users.username_clean as _alternativeUsername, '
             + prefix + 'users.user_email as _registrationEmail, '
             //+ prefix + 'users.user_rank as _level, '
-            + prefix + 'users.user_regdate as _joindate, '
-            + prefix + 'users.user_email as _email '
+            + prefix + 'users.user_joindate as _joindate, '
+            + prefix + 'users.user_email as _email, '
             //+ prefix + 'banlist.ban_id as _banned '
-            //+ prefix + 'USER_PROFILE.USER_SIGNATURE as _signature, '
-            //+ prefix + 'USER_PROFILE.USER_HOMEPAGE as _website, '
-            //+ prefix + 'USER_PROFILE.USER_OCCUPATION as _occupation, '
-            //+ prefix + 'USER_PROFILE.USER_LOCATION as _location, '
+            + prefix + 'users.user_sig as _signature, '
+            + prefix + 'users.user_website as _website, '
+            + prefix + 'users.user_occ as _occupation, '
+			// no , on last line
+           	+ prefix + 'users.user_from as _location '
             //+ prefix + 'USER_PROFILE.USER_AVATAR as _picture, '
             //+ prefix + 'USER_PROFILE.USER_TITLE as _title, '
             //+ prefix + 'USER_PROFILE.USER_RATING as _reputation, '
             //+ prefix + 'USER_PROFILE.USER_TOTAL_RATES as _profileviews, '
             //+ prefix + 'USER_PROFILE.USER_BIRTHDAY as _birthday '
-
+      
             + 'FROM ' + prefix + 'users '
             + 'WHERE ' + prefix + 'users.user_id = ' + prefix + 'users.user_id '
             + (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
@@ -87,6 +88,9 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
 
                     // lower case the email for consistency
                     row._email = (row._email || '').toLowerCase();
+										
+                    // location
+                    row._location = (row._location || '').trim();
 
                     // I don't know about you about I noticed a lot my users have incomplete urls, urls like: http://
                     row._picture = Exporter.validateUrl(row._picture);
@@ -98,7 +102,51 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
                 callback(null, map);
             });
     };
+	
+	    Exporter.getMessages = function(callback) {
+        return Exporter.getPaginatedMessages(0, -1, callback);
+    };
+    Exporter.getPaginatedMessages = function(start, limit, callback) {
+        callback = !_.isFunction(callback) ? noob : callback;
 
+        var err;
+        var prefix = Exporter.config('prefix');
+        var startms = +new Date();
+        var query = 'SELECT '
+            + prefix + 'privmsgs.privmsgs_id as _mid, '
+            + prefix + 'privmsgs.privmsgs_from_userid _fromuid, '
+            + prefix + 'privmsgs.privmsgs_to_userid as _touid, '
+            + prefix + 'privmsgs.privmsgs_text as _content, '
+            + prefix + 'privmsgs.privmsgs_date as _timestamp '
+            + 'FROM ' + prefix + 'privmsgs '
+            + (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
+
+            if(!Exporter.connection) {
+                err = {error: 'MySQL connection is not setup. Run setup(config) first'};
+                Exporter.error(err.error);
+                return callback(err);
+            }
+
+            Exporter.connection.query(query,
+                function(err, rows) {
+                    if (err) {
+                        Exporter.error(err);
+                        return callback(err);
+                    }
+
+                    var map = {};
+                    rows.forEach(function(row) {
+                        //row._touid = row._touid.substr(2);
+                        //row._content = entities.decode(row._content);
+                        row._timestamp = ((row._timestamp || 0) * 1000) || startms;
+
+                        map[row._mid] = row;
+                    });
+
+                    callback(null, map);
+                });
+    };
+	
     Exporter.getCategories = function(callback) {
         return Exporter.getPaginatedCategories(0, -1, callback);    
     };
@@ -132,7 +180,7 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
                 var map = {};
                 rows.forEach(function(row) {
                     row._name = row._name || 'Untitled Category';
-                    row._description = row._description || 'No decsciption available';
+                    row._description = row._description || 'No description available';
                     row._timestamp = ((row._timestamp || 0) * 1000) || startms;
 
                     map[row._cid] = row;
