@@ -247,16 +247,12 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
                     return callback(err);
                 }
 
-                //normalize here
-                var map = {};
                 rows.forEach(function(row) {
                     row._title = row._title ? row._title[0].toUpperCase() + row._title.substr(1) : 'Untitled';
                     row._timestamp = ((row._timestamp || 0) * 1000) || startms;
-
-                    map[row._tid] = row;
                 });
 
-                callback(null, map);
+                callback(null, rows);
             });
     };
 
@@ -317,18 +313,16 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
 					return callback(err);
 				}
 				getTopicsMainPids(function(err, mpids) {
-					//normalize here
-					var map = {};
+
 					rows.forEach(function (row) {
 						// make it's not a topic
 						if (! mpids[row._pid]) {
 							row._content = row._content || '';
 							row._timestamp = ((row._timestamp || 0) * 1000) || startms;
-							map[row._pid] = row;
 						}
 					});
 
-					callback(null, map);
+					callback(null, rows);
 				});
 			});
 
